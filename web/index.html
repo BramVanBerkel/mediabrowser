@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Media Browser</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <nav id="crumbs" aria-label="Folder path"></nav>
+  <div class="tools">
+    <label class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input id="search" type="search" placeholder="Search" autocomplete="off" enterkeyhint="search" aria-label="Search file names">
+    </label>
+    <label class="sort">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg>
+      <select id="sort" aria-label="Sort by">
+        <option value="name">Name A–Z</option>
+        <option value="name-desc">Name Z–A</option>
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="largest">Largest first</option>
+        <option value="smallest">Smallest first</option>
+      </select>
+    </label>
+  </div>
+  <label class="btn" id="upload-btn">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-5 5m5-5 5 5M4 20h16"/></svg>
+    <span>Upload</span>
+    <input type="file" id="file-input" multiple hidden>
+  </label>
+</header>
+
+<section id="uploads" hidden></section>
+
+<main>
+  <div id="grid"></div>
+  <p id="message" hidden></p>
+</main>
+
+<div id="drop" hidden><div>Drop files to upload here</div></div>
+
+<div id="viewer" hidden>
+  <div id="v-stage"></div>
+  <button id="v-prev" class="v-btn" aria-label="Previous">&#8249;</button>
+  <button id="v-next" class="v-btn" aria-label="Next">&#8250;</button>
+  <div id="v-bar">
+    <span id="v-caption"></span>
+    <a id="v-download" class="v-btn" aria-label="Download" download>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>
+    </a>
+    <button id="v-close" class="v-btn" aria-label="Close">&#215;</button>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

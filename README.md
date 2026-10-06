@@ -1,0 +1,101 @@
+# mediabrowser
+
+A simple web-based media browser for your local network. Run one executable,
+point it at a folder, and browse it from any phone, tablet or computer on the
+same network, including uploading files into it.
+
+- Thumbnail grid for images and videos, with folder previews
+- Full-screen viewer with swipe and arrow-key navigation, video streaming and seeking
+- Upload from any device: pick files or drag and drop, with progress bars
+- Search by file name across subfolders, and sort by name, date or size
+- QR code at startup, so a phone can open it instantly
+- Optional password protection
+- A single executable with the web UI built in; no install, no database
+
+## Download
+
+Grab the build for your system from the [latest release](../../releases/latest):
+
+| System | File |
+| --- | --- |
+| Mac (Apple Silicon) | `mediabrowser-mac-arm64` |
+| Mac (Intel) | `mediabrowser-mac-intel` |
+| Windows | `mediabrowser-windows.exe` |
+| Linux (PC) | `mediabrowser-linux-amd64` |
+| Linux (Raspberry Pi 64-bit, ARM) | `mediabrowser-linux-arm64` |
+
+On Mac and Linux, make the download executable first. On a Mac, also clear the
+"downloaded from the internet" flag, since the builds aren't signed by Apple:
+
+```sh
+chmod +x mediabrowser-mac-arm64
+xattr -d com.apple.quarantine mediabrowser-mac-arm64   # Mac only
+```
+
+## Usage
+
+```sh
+mediabrowser ~/Pictures
+mediabrowser --port 9000 --password secret ~/Pictures
+```
+
+It prints the addresses to open, plus a QR code for your phone.
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `--port` | `8080` | Port to listen on |
+| `--password` | none | Require a password to browse or upload |
+| `--version` | | Print the version and exit |
+
+### Video thumbnails
+
+Image thumbnails work out of the box. For **video** thumbnails (and HEIC/iPhone
+photo thumbnails), install [ffmpeg](https://ffmpeg.org) and make sure it's on
+your `PATH`:
+
+```sh
+brew install ffmpeg        # Mac
+sudo apt install ffmpeg    # Debian, Ubuntu, Raspberry Pi OS
+winget install ffmpeg      # Windows
+```
+
+Without ffmpeg, videos show a plain icon. Thumbnails are cached in your user
+cache folder (e.g. `~/Library/Caches/mediabrowser` on a Mac), not in your media
+folder.
+
+### Security
+
+This is meant for a trusted home network. It uses plain HTTP and, without
+`--password`, anyone on the network can view and upload files. Don't expose it
+to the internet with port forwarding. For access away from home, use a private
+network tool such as [Tailscale](https://tailscale.com).
+
+Uploads never overwrite existing files (`photo.jpg` becomes `photo (1).jpg`),
+and requests can't reach files outside the folder you shared. Hidden files
+(names starting with `.`) aren't shown or served.
+
+## Building from source
+
+Requires [Go](https://go.dev) 1.26 or newer.
+
+```sh
+make                         # build ./mediabrowser
+make run DIR=~/Pictures      # build and run
+make dist                    # build every platform into dist/
+```
+
+The web UI lives in `web/` and is embedded into the executable at build time,
+so rebuild after changing it.
+
+### Releasing
+
+Push a version tag and GitHub Actions builds every platform and publishes a release:
+
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+## License
+
+[GPL-3.0](LICENSE)
