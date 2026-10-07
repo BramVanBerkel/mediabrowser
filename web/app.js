@@ -23,14 +23,13 @@ let stats = new Map(); // folder stats by path, cleared on every load
 
 /* ---------- File kinds ---------- */
 
-// The server only tells images and videos apart; the rest is by extension,
+// The server tells images, videos and audio apart; the rest is by extension,
 // for icons and the Type column.
 const extKinds = {};
 for (const [kind, exts] of Object.entries({
   document: 'pdf doc docx txt md rtf odt pages epub key ppt pptx odp',
   spreadsheet: 'xls xlsx csv tsv ods numbers',
   code: 'js mjs ts jsx tsx json html htm css go py rb java c h cpp hpp rs sh yml yaml toml xml php swift kt sql',
-  audio: 'mp3 wav flac aac m4a ogg opus aif aiff wma',
   archive: 'zip rar 7z tar gz tgz bz2 xz dmg iso',
 })) {
   for (const ext of exts.split(' ')) extKinds[ext] = kind;
@@ -57,7 +56,8 @@ const kindIcon = (e) => icon(kindIcons[kindOf(e)], 'kind-icon ' + kindOf(e));
 const previewSrc = (e, p) => '/thumb/' + enc(join(e.full, p.path)) + '?v=' + p.mtime;
 
 function thumbSrc(e) {
-  if (e.type === 'image' || e.type === 'video') return '/thumb/' + enc(e.full) + '?v=' + e.mtime;
+  // Audio only has a thumbnail if it carries cover art; otherwise the icon shows.
+  if (e.type === 'image' || e.type === 'video' || e.type === 'audio') return '/thumb/' + enc(e.full) + '?v=' + e.mtime;
   if (e.type === 'dir' && e.preview && e.preview.length) return previewSrc(e, e.preview[0]);
   return null;
 }
@@ -216,7 +216,7 @@ for (const v of ['grid', 'list']) {
 
 /* ---------- Items ---------- */
 
-const viewable = () => sorted.filter((e) => e.type === 'image' || e.type === 'video');
+const viewable = () => sorted.filter((e) => e.type === 'image' || e.type === 'video' || e.type === 'audio');
 
 function render() {
   renderControls();
@@ -326,6 +326,7 @@ function renderGrid() {
       thumb.append(img);
       if (e.type === 'video') thumb.append(el('span', 'play-badge', '<span>' + icon('play') + '</span>'));
       if (e.type === 'dir') thumb.append(el('span', 'folder-badge', icon('folder')));
+      if (e.type === 'audio') thumb.append(el('span', 'folder-badge audio', icon('music')));
     } else {
       plain();
     }

@@ -1,4 +1,5 @@
-// Fullscreen lightbox for images and videos, with zoom and pan for images.
+// Fullscreen lightbox for images, videos and audio, with zoom and pan for images.
+import { icon } from './icons.js';
 import { $, el, enc, formatBytes } from './util.js';
 
 const viewer = $('#viewer');
@@ -12,9 +13,9 @@ const zoomResetBtn = $('#v-zoom-reset');
 const MAX_SCALE = 8;
 const STEP = Math.exp(0.4); // zoom factor of the buttons and + / - keys
 
-let items = [];  // images and videos in display order
+let items = [];  // images, videos and audio in display order
 let index = -1;
-let media = null; // the <img> or <video> on stage
+let media = null; // the <img>, <video> or <audio> on stage
 let scale = 1;
 let tx = 0;      // translation of the plane, in px
 let ty = 0;
@@ -53,19 +54,26 @@ function show(i) {
     media.alt = e.name;
     media.draggable = false;
   } else {
-    media = el('video');
-    media.controls = true;
-    media.autoplay = true;
-    media.playsInline = true;
+    const m = (media = el(e.type === 'audio' ? 'audio' : 'video'));
+    m.controls = true;
+    m.autoplay = true;
+    m.playsInline = true;
+    m.onerror = () => mediaError(m);
   }
   media.src = src;
-  plane.replaceChildren(media);
+  if (e.type === 'audio') {
+    // Play through a folder like an album.
+    media.onended = () => items[index + 1] && items[index + 1].type === 'audio' && step(1);
+    plane.replaceChildren(audioCard(e, media));
+  } else {
+    plane.replaceChildren(media);
+  }
   setTransform(1, 0, 0);
 
   $('#v-title').textContent = e.name;
   $('#v-count').textContent = `${i + 1} / ${items.length}`;
   $('#v-download').href = src + '?download';
-  $('#v-kind').textContent = e.type === 'video' ? 'Video' : 'Image';
+  $('#v-kind').textContent = { image: 'Image', video: 'Video', audio: 'Audio' }[e.type];
   $('#v-size').textContent = formatBytes(e.size);
   $('#v-prev').hidden = i === 0;
   $('#v-next').hidden = i === items.length - 1;
@@ -73,6 +81,35 @@ function show(i) {
   // Preload the next image so stepping through feels instant.
   const next = items[i + 1];
   if (next && next.type === 'image') new Image().src = '/media/' + enc(next.full);
+}
+
+// Replaces a video or audio player that failed with a note saying why.
+async function mediaError(m) {
+  const code = m.error && m.error.code;
+  if (code === MediaError.MEDIA_ERR_ABORTED) return; // loading was stopped, e.g. by stepping on
+  const unplayable = "This file can't be played in your browser. Download it to play it.";
+  const unloaded = "Couldn't load this file. Check the connection and try again.";
+  let msg = code === MediaError.MEDIA_ERR_NETWORK ? unloaded : unplayable;
+  if (msg === unplayable) {
+    // An HTTP error, such as a lapsed login, also shows up as an unsupported
+    // source, so check the file can be fetched before blaming its format.
+    const res = await fetch(m.src, { method: 'HEAD' }).catch(() => null);
+    if (!res || !res.ok) msg = unloaded;
+  }
+  m.replaceWith(el('p', 'v-error', msg));
+}
+
+// The cover art (or a note icon when there is none) above the player.
+function audioCard(e, player) {
+  const card = el('div', 'v-audio');
+  const none = () => el('div', 'v-cover none', icon('music'));
+  const cover = el('img', 'v-cover');
+  cover.alt = '';
+  cover.draggable = false;
+  cover.src = '/thumb/' + enc(e.full) + '?v=' + e.mtime;
+  cover.onerror = () => cover.replaceWith(none());
+  card.append(cover, player);
+  return card;
 }
 
 function step(delta) {
@@ -237,7 +274,7 @@ stage.addEventListener('pointercancel', endPointer);
 
 // A tap or click beside the image closes the lightbox.
 stage.addEventListener('click', (ev) => {
-  if (moved || scale > 1.01 || !media || ev.target.closest('button') || ev.target.tagName === 'VIDEO') return;
+  if (moved || scale > 1.01 || !media || ev.target.closest('button, .v-audio > *') || ev.target.tagName === 'VIDEO') return;
   if (zoomable()) {
     const b = fitBox();
     const p = local(ev);

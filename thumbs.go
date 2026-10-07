@@ -66,7 +66,7 @@ func newThumbnailer(root *os.Root, rootDir, cacheDir, ffmpeg string) *thumbnaile
 // get returns the path of a cached JPEG thumbnail for rel, generating it if needed.
 func (t *thumbnailer) get(rel string) (string, error) {
 	kind := kindOf(rel)
-	if kind != "image" && kind != "video" {
+	if kind == "other" {
 		return "", errNoThumb
 	}
 	st, err := t.root.Stat(filepath.FromSlash(rel))
@@ -173,8 +173,16 @@ func (t *thumbnailer) fromFFmpeg(rel, kind, out string) error {
 		return writeJPEG(resize(src), out)
 	}
 
-	// Grab a frame one second in to skip black intros; retry at the start for very short clips.
 	scale := fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase", thumbSize, thumbSize)
+	if kind == "audio" {
+		// Audio files can carry cover art, which ffmpeg sees as a one-frame video stream.
+		if err := t.runFFmpeg("-i", in, "-map", "0:v:0", "-frames:v", "1", "-vf", scale, "-q:v", "4", tmp); err != nil {
+			return err
+		}
+		return os.Rename(tmp, out)
+	}
+
+	// Grab a frame one second in to skip black intros; retry at the start for very short clips.
 	for _, ss := range []string{"1", "0"} {
 		if err := t.runFFmpeg("-ss", ss, "-i", in, "-frames:v", "1", "-vf", scale, "-q:v", "4", tmp); err == nil {
 			return os.Rename(tmp, out)

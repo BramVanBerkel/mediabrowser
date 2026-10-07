@@ -192,3 +192,30 @@ func TestUploadFolder(t *testing.T) {
 		t.Errorf("folder over a file: got 200")
 	}
 }
+
+func TestAudio(t *testing.T) {
+	h := newTestServer(t)
+	upload(t, h, "", [][2]string{{"album", "01 song.mp3"}, {"album", "cover.jpg"}})
+
+	var got struct{ Entries []entry }
+	json.Unmarshal(get(t, h, "/api/list?path=album").Body.Bytes(), &got)
+	types := map[string]string{}
+	for _, e := range got.Entries {
+		types[e.Name] = e.Type
+	}
+	if types["01 song.mp3"] != "audio" || types["cover.jpg"] != "image" {
+		t.Errorf("types = %v", types)
+	}
+
+	// Audio is left out of folder previews, which need a picture.
+	json.Unmarshal(get(t, h, "/api/list?path=").Body.Bytes(), &got)
+	for _, e := range got.Entries {
+		if e.Name == "album" && (len(e.Preview) != 1 || e.Preview[0].Path != "cover.jpg") {
+			t.Errorf("album preview = %+v, want just cover.jpg", e.Preview)
+		}
+	}
+
+	if ct := get(t, h, "/media/album/01%20song.mp3").Header().Get("Content-Type"); ct != "audio/mpeg" {
+		t.Errorf("Content-Type = %q", ct)
+	}
+}

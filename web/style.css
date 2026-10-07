@@ -388,6 +388,7 @@ main {
   pointer-events: none;
 }
 .folder-badge .i { width: 12px; height: 12px; color: var(--folder-badge); }
+.folder-badge.audio .i { color: var(--foreground); }
 
 /* List view */
 .list { border: 1px solid var(--border); }
@@ -611,6 +612,35 @@ footer.v-bar {
   cursor: zoom-in;
 }
 #v-stage.zoomed img { cursor: grab; }
+/* Audio: cover art (or a note icon), the title and the player, centred. */
+.v-audio {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 24px 64px;
+}
+#v-plane .v-cover {
+  position: static;
+  width: min(280px, 60vw, 40vh);
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  cursor: default;
+}
+.v-cover.none {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--lightbox-border);
+  background: var(--lightbox-control);
+}
+.v-cover.none .i { width: 64px; height: 64px; stroke-width: 1; color: var(--lightbox-muted); }
+.v-audio audio { width: min(480px, 100%); }
+.v-error { color: var(--lightbox-muted); font-size: 13px; text-align: center; }
+#v-plane > .v-error { position: absolute; inset: 0; display: grid; place-content: center; padding: 0 64px; }
 #v-stage.dragging img { cursor: grabbing; }
 .v-nav {
   position: absolute;

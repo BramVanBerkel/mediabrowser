@@ -24,7 +24,7 @@ type cachedPreview struct {
 }
 
 // folderPreview returns up to previewCount images or videos for the folder at
-// rel. It prefers the folder's own files, then looks breadth-first into
+// rel. Audio is left out, as most of it has no picture to show. It prefers the folder's own files, then looks breadth-first into
 // subfolders. Results are cached until the folder's modification time changes.
 func (s *server) folderPreview(rel string) []previewItem {
 	st, err := s.root.Stat(filepath.FromSlash(rel))
@@ -73,7 +73,7 @@ func (s *server) findPreview(rel string) []previewItem {
 				queue = append(queue, p)
 				continue
 			}
-			if !d.Type().IsRegular() || kindOf(name) == "other" {
+			if k := kindOf(name); !d.Type().IsRegular() || (k != "image" && k != "video") {
 				continue
 			}
 			info, err := d.Info()

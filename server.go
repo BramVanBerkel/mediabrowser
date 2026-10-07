@@ -30,6 +30,11 @@ var videoExts = map[string]bool{
 	".m2ts": true, ".ts": true, ".ogv": true,
 }
 
+var audioExts = map[string]bool{
+	".mp3": true, ".m4a": true, ".aac": true, ".wav": true, ".flac": true, ".ogg": true,
+	".oga": true, ".opus": true, ".aif": true, ".aiff": true, ".wma": true,
+}
+
 func init() {
 	// Not every OS ships a mime.types file, so make sure common media types are known.
 	for ext, typ := range map[string]string{
@@ -37,6 +42,9 @@ func init() {
 		".mkv": "video/x-matroska", ".avi": "video/x-msvideo", ".ogv": "video/ogg",
 		".3gp": "video/3gpp", ".ts": "video/mp2t", ".mts": "video/mp2t", ".m2ts": "video/mp2t",
 		".heic": "image/heic", ".heif": "image/heif", ".avif": "image/avif", ".webp": "image/webp",
+		".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".wav": "audio/wav",
+		".flac": "audio/flac", ".ogg": "audio/ogg", ".oga": "audio/ogg", ".opus": "audio/ogg",
+		".aif": "audio/aiff", ".aiff": "audio/aiff", ".wma": "audio/x-ms-wma",
 	} {
 		mime.AddExtensionType(ext, typ)
 	}
@@ -49,6 +57,8 @@ func kindOf(name string) string {
 		return "image"
 	case videoExts[ext]:
 		return "video"
+	case audioExts[ext]:
+		return "audio"
 	}
 	return "other"
 }

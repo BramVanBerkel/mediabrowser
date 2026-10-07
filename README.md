@@ -4,8 +4,8 @@ A simple web-based media browser for your local network. Run one executable,
 point it at a folder, and browse it from any phone, tablet or computer on the
 same network, including uploading files into it.
 
-- Grid or list view, with thumbnails for images and videos and a cover photo for folders
-- Full-screen viewer with swipe and arrow-key navigation, zoom and pan for photos, and video streaming and seeking
+- Grid or list view, with thumbnails for images, videos and album art, and a cover of up to four photos for folders
+- Full-screen viewer with swipe and arrow-key navigation, zoom and pan for photos, video streaming and seeking, and an audio player that plays through a folder like an album
 - Details panel with size, date and location, including the total size of a folder
 - Download single files, or whole folders as a ZIP
 - Upload from any device: pick files or drag and drop, with progress bars; on a computer, whole folders too
@@ -53,7 +53,7 @@ It prints the addresses to open, plus a QR code for your phone.
 ### Video thumbnails
 
 Image thumbnails work out of the box. For **video** thumbnails (and HEIC/iPhone
-photo thumbnails), install [ffmpeg](https://ffmpeg.org) and make sure it's on
+photo thumbnails and album art from audio files), install [ffmpeg](https://ffmpeg.org) and make sure it's on
 your `PATH`:
 
 ```sh
@@ -62,7 +62,7 @@ sudo apt install ffmpeg    # Debian, Ubuntu, Raspberry Pi OS
 winget install ffmpeg      # Windows
 ```
 
-Without ffmpeg, videos show a plain icon. Thumbnails are cached in your user
+Without ffmpeg, videos and audio show a plain icon. Thumbnails are cached in your user
 cache folder (e.g. `~/Library/Caches/mediabrowser` on a Mac), not in your media
 folder.
 

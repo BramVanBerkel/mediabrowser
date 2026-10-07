@@ -158,7 +158,7 @@ func (s *server) zipFile(zw *zip.Writer, p, name string, info fs.FileInfo) error
 	defer f.Close()
 	hdr := &zip.FileHeader{Name: name, Modified: info.ModTime(), Method: zip.Deflate}
 	if kindOf(name) != "other" {
-		hdr.Method = zip.Store // photos and videos are already compressed
+		hdr.Method = zip.Store // photos, videos and audio are already compressed
 	}
 	dst, err := zw.CreateHeader(hdr)
 	if err != nil {
