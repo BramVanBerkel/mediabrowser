@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -132,5 +133,62 @@ func TestRefusedPaths(t *testing.T) {
 		if rec := get(t, h, url); rec.Code == 200 {
 			t.Errorf("%s: got 200", url)
 		}
+	}
+}
+
+// upload posts files to /api/upload?path=dest; each one goes into the
+// subfolder given by its key, as an uploaded folder's files do.
+func upload(t *testing.T, h http.Handler, dest string, files [][2]string) *httptest.ResponseRecorder {
+	t.Helper()
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	for _, f := range files {
+		dir, name := f[0], f[1]
+		if dir != "" {
+			mw.WriteField("dir", dir)
+		}
+		fw, _ := mw.CreateFormFile("file", name)
+		fw.Write([]byte("data:" + name))
+	}
+	mw.Close()
+	req := httptest.NewRequest("POST", "/api/upload?path="+dest, &body)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestUploadFolder(t *testing.T) {
+	h := newTestServer(t)
+	rec := upload(t, h, "sub", [][2]string{
+		{"Trip/Day 1", "x.jpg"},
+		{"../Trip/./Day 1", "y.jpg"}, // cleaned up to the same folder
+		{"", "z.jpg"},                // no folder: straight into sub
+		{"Trip/Day 1", "x.jpg"},      // taken, so renamed
+	})
+	if rec.Code != 200 {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body)
+	}
+	var got struct{ Saved []string }
+	json.Unmarshal(rec.Body.Bytes(), &got)
+	want := []string{"Trip/Day 1/x.jpg", "Trip/Day 1/y.jpg", "z.jpg", "Trip/Day 1/x (1).jpg"}
+	if len(got.Saved) != len(want) {
+		t.Fatalf("saved %q, want %q", got.Saved, want)
+	}
+	for i := range want {
+		if got.Saved[i] != want[i] {
+			t.Errorf("saved %q, want %q", got.Saved, want)
+			break
+		}
+	}
+	for _, p := range []string{"sub/Trip/Day%201/x.jpg", "sub/Trip/Day%201/y.jpg", "sub/z.jpg"} {
+		if rec := get(t, h, "/media/"+p); rec.Code != 200 || !bytes.HasPrefix(rec.Body.Bytes(), []byte("data:")) {
+			t.Errorf("%s: status %d", p, rec.Code)
+		}
+	}
+
+	// A folder can't replace a file of the same name.
+	if rec := upload(t, h, "", [][2]string{{"a.jpg", "w.jpg"}}); rec.Code == 200 {
+		t.Errorf("folder over a file: got 200")
 	}
 }

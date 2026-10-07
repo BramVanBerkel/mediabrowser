@@ -574,21 +574,22 @@ document.addEventListener('keydown', (ev) => {
 
 let activeUploads = 0;
 
-async function uploadFiles(files) {
-  files = files.filter((f) => f.size > 0 || f.type);
-  if (!files.length) return;
+// Uploads items of { file, dir } to the current folder, dir being the
+// subfolder (possibly nested, '' for none) the file goes into.
+async function uploadFiles(items) {
+  if (!items.length) return;
   const dest = current;
   uploadsBox.hidden = false;
-  const rows = files.map((f) => {
+  const rows = items.map(({ file, dir }) => {
     const row = el('div', 'up');
     const n = el('span', 'n');
-    n.textContent = f.name;
+    n.textContent = join(dir, file.name);
     const s = el('span', 's');
-    s.textContent = 'Waiting · ' + formatBytes(f.size);
+    s.textContent = 'Waiting · ' + formatBytes(file.size);
     const bar = el('div', 'bar', '<div></div>');
     row.append(n, s, bar);
     uploadsBox.append(row);
-    return { file: f, row, s, fill: bar.firstChild };
+    return { file, dir, row, s, fill: bar.firstChild };
   });
 
   activeUploads++;
@@ -627,16 +628,61 @@ function uploadOne(r, dest) {
     xhr.onerror = () => fail('Failed');
     const fd = new FormData();
     fd.append('lastModified', r.file.lastModified); // lets the server keep the original date
+    if (r.dir) fd.append('dir', r.dir); // the server creates it if needed
     fd.append('file', r.file, r.file.name);
     r.s.textContent = '0%';
     xhr.send(fd);
   });
 }
 
+const isHidden = (name) => name.startsWith('.'); // .DS_Store and the like
+
 $('#file-input').addEventListener('change', (ev) => {
-  uploadFiles([...ev.target.files]);
+  uploadFiles([...ev.target.files].map((file) => ({ file, dir: '' })));
   ev.target.value = '';
 });
+
+// A picked folder's files come with paths like "Trip/Day 1/photo.jpg".
+$('#folder-input').addEventListener('change', (ev) => {
+  const items = [];
+  for (const file of ev.target.files) {
+    const parts = file.webkitRelativePath.split('/');
+    if (parts.some(isHidden)) continue;
+    items.push({ file, dir: parts.slice(0, -1).join('/') });
+  }
+  uploadFiles(items);
+  ev.target.value = '';
+});
+
+// Collects the files below a dropped file or folder entry into out.
+async function walkEntry(entry, dir, out) {
+  if (isHidden(entry.name)) return;
+  if (entry.isFile) {
+    const file = await new Promise((res, rej) => entry.file(res, rej)).catch(() => null);
+    if (file) out.push({ file, dir });
+  } else if (entry.isDirectory) {
+    const reader = entry.createReader();
+    const sub = join(dir, entry.name);
+    // readEntries returns the folder's contents in batches, then an empty one.
+    for (;;) {
+      const batch = await new Promise((res, rej) => reader.readEntries(res, rej)).catch(() => []);
+      if (!batch.length) break;
+      for (const e of batch) await walkEntry(e, sub, out);
+    }
+  }
+}
+
+async function droppedItems(dt) {
+  // The entries must be taken before the drop event returns.
+  const entries = [...dt.items].map((i) => i.webkitGetAsEntry?.()).filter(Boolean);
+  if (!entries.length) {
+    // No folder support: plain files only. Folders show up as empty, typeless files.
+    return [...dt.files].filter((f) => f.size > 0 || f.type).map((file) => ({ file, dir: '' }));
+  }
+  const out = [];
+  for (const e of entries) await walkEntry(e, '', out);
+  return out;
+}
 
 window.addEventListener('beforeunload', (ev) => {
   if (activeUploads) ev.preventDefault();
@@ -666,7 +712,7 @@ window.addEventListener('drop', (ev) => {
   ev.preventDefault();
   dragDepth = 0;
   drop.hidden = true;
-  uploadFiles([...ev.dataTransfer.files]);
+  droppedItems(ev.dataTransfer).then(uploadFiles);
 });
 
 load();

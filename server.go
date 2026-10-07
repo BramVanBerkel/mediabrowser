@@ -279,6 +279,7 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	saved := []string{}
 	var mtime time.Time // original modification time of the next file, if the client sent it
+	sub := ""           // subfolder of rel for the next file, if the client sent one
 	for {
 		part, err := mr.NextPart()
 		if err == io.EOF {
@@ -296,24 +297,39 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 			}
 			continue
 		}
+		if part.FileName() == "" && part.FormName() == "dir" {
+			b, _ := io.ReadAll(io.LimitReader(part, 4096))
+			part.Close()
+			sub = sanitizeDir(string(b))
+			if sub != "" {
+				if err := s.root.MkdirAll(filepath.FromSlash(path.Join(rel, sub)), 0o755); err != nil {
+					log.Printf("upload folder %q failed: %v", sub, err)
+					http.Error(w, "could not create folder "+sub, http.StatusInternalServerError)
+					return
+				}
+			}
+			continue
+		}
 		name := sanitizeName(part.FileName())
 		if name == "" {
 			part.Close()
 			continue
 		}
-		final, err := s.saveUpload(rel, name, part)
+		dir := path.Join(rel, sub)
+		final, err := s.saveUpload(dir, name, part)
 		part.Close()
 		if err != nil {
-			log.Printf("upload %q failed: %v", name, err)
+			log.Printf("upload %q failed: %v", path.Join(sub, name), err)
 			http.Error(w, "could not save "+name, http.StatusInternalServerError)
 			return
 		}
 		if !mtime.IsZero() && mtime.Before(time.Now().Add(24*time.Hour)) {
-			s.root.Chtimes(filepath.FromSlash(path.Join(rel, final)), mtime, mtime)
+			s.root.Chtimes(filepath.FromSlash(path.Join(dir, final)), mtime, mtime)
 		}
 		mtime = time.Time{}
-		log.Printf("uploaded %s (from %s)", path.Join(rel, final), r.RemoteAddr)
-		saved = append(saved, final)
+		log.Printf("uploaded %s (from %s)", path.Join(dir, final), r.RemoteAddr)
+		saved = append(saved, path.Join(sub, final))
+		sub = ""
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -332,6 +348,19 @@ func sanitizeName(name string) string {
 	}, name)
 	name = strings.TrimSpace(strings.TrimLeft(name, "."))
 	return name
+}
+
+// sanitizeDir reduces a client-supplied relative folder path, such as
+// "Trip/Day 1" from an uploaded folder, to safe, visible names joined by "/".
+// It returns "" if nothing is left.
+func sanitizeDir(dir string) string {
+	var parts []string
+	for _, p := range strings.Split(strings.ReplaceAll(dir, "\\", "/"), "/") {
+		if p = sanitizeName(p); p != "" {
+			parts = append(parts, p)
+		}
+	}
+	return strings.Join(parts, "/")
 }
 
 // saveUpload streams src into dir under name, picking "name (1).ext" etc. if

@@ -8,7 +8,7 @@ same network, including uploading files into it.
 - Full-screen viewer with swipe and arrow-key navigation, zoom and pan for photos, and video streaming and seeking
 - Details panel with size, date and location, including the total size of a folder
 - Download single files, or whole folders as a ZIP
-- Upload from any device: pick files or drag and drop, with progress bars
+- Upload from any device: pick files or drag and drop, with progress bars; on a computer, whole folders too
 - Search by file name across subfolders, and sort by name, date, size or type
 - Light and dark theme, following the system or chosen by hand
 - QR code at startup, so a phone can open it instantly

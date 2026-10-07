@@ -152,6 +152,8 @@ button:disabled { cursor: default; opacity: .5; }
 }
 .controls .divider { display: none; }
 .mobile-label { font-size: 9px; font-weight: 600; color: var(--muted-foreground); }
+/* Phones can't pick folders, so the folder upload is for larger screens. */
+#upload-folder-btn { display: none; }
 .controls .group > .mobile-label { padding-left: 10px; }
 #sort {
   padding: 8px 4px 8px 8px;
@@ -225,6 +227,7 @@ button:disabled { cursor: default; opacity: .5; }
   .controls .group { border: 0; background: transparent; }
   .controls .divider { display: block; width: 1px; align-self: stretch; margin: 8px 0; background: var(--border); }
   .mobile-label { display: none; }
+  #upload-folder-btn { display: inline-flex; }
   #sort { padding-left: 10px; }
   .theme { position: relative; top: auto; right: auto; }
   .theme .icon-btn { width: 36px; height: 36px; }
@@ -256,6 +259,8 @@ button:disabled { cursor: default; opacity: .5; }
 /* ---------- Upload progress ---------- */
 
 #uploads {
+  max-height: 40vh;
+  overflow-y: auto;
   margin: 0 16px 12px;
   padding: 4px 12px;
   border: 1px solid var(--border);

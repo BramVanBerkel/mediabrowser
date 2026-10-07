@@ -40,6 +40,10 @@
         <span class="mobile-label">Upload</span>
         <input type="file" id="file-input" multiple hidden aria-label="Upload files">
       </label>
+      <label class="icon-btn" id="upload-folder-btn" title="Upload a folder to this folder">
+        <i data-icon="folder-up"></i>
+        <input type="file" id="folder-input" webkitdirectory hidden aria-label="Upload a folder">
+      </label>
       <span class="divider" aria-hidden="true"></span>
       <div class="group">
         <button id="view-grid" class="icon-btn" type="button" aria-label="Grid view"><i data-icon="layout-grid"></i></button>
@@ -75,7 +79,7 @@
   <aside id="details" hidden aria-label="Details"></aside>
 </div>
 
-<div id="drop" hidden><div>Drop files to upload here</div></div>
+<div id="drop" hidden><div>Drop files or folders to upload here</div></div>
 
 <div id="viewer" hidden tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="v-title">
   <header class="v-bar">
