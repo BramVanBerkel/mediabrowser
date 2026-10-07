@@ -219,3 +219,27 @@ func TestAudio(t *testing.T) {
 		t.Errorf("Content-Type = %q", ct)
 	}
 }
+
+func TestMediaSandbox(t *testing.T) {
+	h := newTestServer(t)
+	upload(t, h, "", [][2]string{{"", "page.html"}, {"", "logo.svg"}, {"", "doc.pdf"}, {"", "song.mp3"}, {"", "data.bin"}})
+
+	for name, sandboxed := range map[string]bool{
+		"page.html": true, "logo.svg": true, "data.bin": true, "sub/b.txt": true,
+		"a.jpg": false, "doc.pdf": false, "song.mp3": false,
+	} {
+		rec := get(t, h, "/media/"+name)
+		if rec.Code != 200 {
+			t.Fatalf("%s: status %d", name, rec.Code)
+		}
+		if got := rec.Header().Get("Content-Security-Policy") == "sandbox"; got != sandboxed {
+			t.Errorf("%s: sandboxed = %v, want %v", name, got, sandboxed)
+		}
+		if rec.Header().Get("X-Content-Type-Options") != "nosniff" {
+			t.Errorf("%s: no nosniff header", name)
+		}
+	}
+	if get(t, h, "/api/list?path=").Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Error("/api/list: no nosniff header")
+	}
+}

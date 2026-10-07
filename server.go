@@ -113,7 +113,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /zip/{path...}", s.handleZip)
 
 	if s.auth == nil {
-		return mux
+		return nosniff(mux)
 	}
 	login, err := fs.ReadFile(static, "login.html")
 	if err != nil {
@@ -124,7 +124,16 @@ func (s *server) routes() http.Handler {
 		w.Write(login)
 	})
 	mux.HandleFunc("POST /login", s.auth.handleLogin)
-	return s.auth.middleware(mux)
+	return nosniff(s.auth.middleware(mux))
+}
+
+// nosniff makes browsers keep to the content types the server sends, rather
+// than guessing (and perhaps finding HTML in an uploaded file).
+func nosniff(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // cleanRel turns a user-supplied path into a clean slash-separated path relative
@@ -225,6 +234,16 @@ func (s *server) handleList(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// inlineSafe reports whether a file can be shown as-is when opened in the
+// browser: photos, videos, audio and PDFs (whose viewer can't be sandboxed).
+func inlineSafe(name string) bool {
+	switch kindOf(name) {
+	case "image", "video", "audio":
+		return true
+	}
+	return strings.EqualFold(path.Ext(name), ".pdf")
+}
+
 func (s *server) handleMedia(w http.ResponseWriter, r *http.Request) {
 	rel, ok := cleanRel(r.PathValue("path"))
 	if !ok {
@@ -244,6 +263,12 @@ func (s *server) handleMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.Query().Has("download") {
 		w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": st.Name()}))
+	}
+	if !inlineSafe(st.Name()) {
+		// Anything that could run scripts when opened (HTML, SVG, XML, files
+		// sniffed as HTML, ...) opens in a sandbox: as if from another site and
+		// without scripts or forms, so it can't use the app's login or API.
+		w.Header().Set("Content-Security-Policy", "sandbox")
 	}
 	// ServeContent handles Range requests, so videos can stream and seek.
 	http.ServeContent(w, r, st.Name(), st.ModTime(), f)

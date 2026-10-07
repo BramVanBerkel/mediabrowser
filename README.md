@@ -75,7 +75,8 @@ network tool such as [Tailscale](https://tailscale.com).
 
 Uploads never overwrite existing files (`photo.jpg` becomes `photo (1).jpg`),
 and requests can't reach files outside the folder you shared. Hidden files
-(names starting with `.`) aren't shown or served.
+(names starting with `.`) aren't shown or served. Files that could run scripts,
+such as HTML or SVG, open in a sandbox, so they can't use your login to the app.
 
 ## Building from source
 
