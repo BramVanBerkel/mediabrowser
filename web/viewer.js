@@ -1,6 +1,7 @@
-// Fullscreen lightbox for images, videos and audio, with zoom and pan for images.
+// Fullscreen lightbox for images, videos, audio and documents, with zoom and pan for images.
 import { icon } from './icons.js';
 import { $, el, enc, formatBytes, barPeaks } from './util.js';
+import { viewKind, fetchText, MAX_TEXT, isMarkdown, renderMarkdown } from './docs.js';
 
 const viewer = $('#viewer');
 const stage = $('#v-stage');
@@ -13,9 +14,9 @@ const zoomResetBtn = $('#v-zoom-reset');
 const MAX_SCALE = 8;
 const STEP = Math.exp(0.4); // zoom factor of the buttons and + / - keys
 
-let items = [];  // images, videos and audio in display order
+let items = [];  // viewable files in display order
 let index = -1;
-let media = null; // the <img>, <video> or <audio> on stage
+let media = null; // the <img>, <video>, <audio>, PDF <iframe> or text box on stage
 let scale = 1;
 let tx = 0;      // translation of the plane, in px
 let ty = 0;
@@ -49,38 +50,81 @@ function show(i) {
   index = i;
   const e = items[i];
   const src = '/media/' + enc(e.full);
-  if (e.type === 'image') {
+  const kind = viewKind(e);
+  if (kind === 'text') {
+    media = el('div', 'v-text');
+    media.tabIndex = -1; // focusable, so the arrow and page keys scroll it
+    loadText(e, media);
+  } else if (kind === 'pdf') {
+    // The browser's own PDF viewer, with its paging, zoom and search.
+    media = el('iframe', 'v-doc');
+    media.title = e.name;
+  } else if (kind === 'image') {
     media = el('img');
     media.alt = e.name;
     media.draggable = false;
   } else {
-    const m = (media = el(e.type === 'audio' ? 'audio' : 'video'));
+    const m = (media = el(kind === 'audio' ? 'audio' : 'video'));
     m.controls = true;
     m.autoplay = true;
     m.playsInline = true;
     m.onerror = () => mediaError(m);
   }
-  media.src = src;
-  if (e.type === 'audio') {
+  if (kind !== 'text') media.src = src;
+  if (kind === 'audio') {
     // Play through a folder like an album.
     media.onended = () => items[index + 1] && items[index + 1].type === 'audio' && step(1);
     plane.replaceChildren(audioCard(e, media));
   } else {
     plane.replaceChildren(media);
   }
+  if (kind === 'text') media.focus({ preventScroll: true });
+  viewer.classList.toggle('reading', kind === 'text');
   setTransform(1, 0, 0);
 
   $('#v-title').textContent = e.name;
   $('#v-count').textContent = `${i + 1} / ${items.length}`;
   $('#v-download').href = src + '?download';
-  $('#v-kind').textContent = { image: 'Image', video: 'Video', audio: 'Audio' }[e.type];
+  $('#v-kind').textContent = kind === 'text' ? (isMarkdown(e) ? 'Markdown' : 'Text')
+    : { image: 'Image', video: 'Video', audio: 'Audio', pdf: 'PDF' }[kind];
   $('#v-size').textContent = formatBytes(e.size);
   $('#v-prev').hidden = i === 0;
   $('#v-next').hidden = i === items.length - 1;
-  $('#v-zoom').hidden = e.type !== 'image';
+  $('#v-zoom').hidden = kind !== 'image';
   // Preload the next image so stepping through feels instant.
   const next = items[i + 1];
   if (next && next.type === 'image') new Image().src = '/media/' + enc(next.full);
+}
+
+// Fills box with a text file: Markdown rendered, anything else as plain text.
+async function loadText(e, box) {
+  const page = el('div', 'v-page');
+  const note = (msg) => {
+    const p = el('p', 'v-note');
+    p.textContent = msg;
+    return p;
+  };
+  page.append(note('Loading…'));
+  box.append(page);
+  let res;
+  try {
+    res = await fetchText(e);
+  } catch {
+    return page.replaceChildren(note("Couldn't load this file. Check the connection and try again."));
+  }
+  if (res.binary) return page.replaceChildren(note("This file doesn't look like text. Download it to open it."));
+  const dir = e.full.includes('/') ? e.full.slice(0, e.full.lastIndexOf('/')) : '';
+  let body;
+  if (isMarkdown(e)) {
+    body = await renderMarkdown(res.text, dir);
+  } else {
+    body = el('pre', 'v-code');
+    body.textContent = res.text;
+  }
+  page.replaceChildren(body);
+  if (res.truncated) {
+    page.append(note(`Showing the first ${formatBytes(MAX_TEXT)} of ${formatBytes(e.size)}. Download the file to see all of it.`));
+  }
 }
 
 // Replaces a video or audio player that failed with a note saying why.
@@ -354,7 +398,7 @@ stage.addEventListener('pointercancel', endPointer);
 
 // A tap or click beside the image closes the lightbox.
 stage.addEventListener('click', (ev) => {
-  if (moved || scale > 1.01 || !media || ev.target.closest('button, .v-audio > *') || ev.target.tagName === 'VIDEO') return;
+  if (moved || scale > 1.01 || !media || ev.target.closest('button, .v-audio > *, .v-page') || ev.target.tagName === 'VIDEO') return;
   if (zoomable()) {
     const b = fitBox();
     const p = local(ev);

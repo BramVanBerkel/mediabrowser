@@ -291,6 +291,20 @@ main {
 .thumb-wave { padding: 15% 12%; color: color-mix(in oklab, var(--muted-foreground) 70%, transparent); }
 .thumb-wave svg { display: block; width: 100%; height: 100%; fill: currentColor; }
 .list .thumb-wave { padding: 8px 4px; }
+.thumb-text {
+  align-self: stretch;
+  justify-self: stretch;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: hidden;
+  font: 7px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--muted-foreground);
+  text-align: left;
+  white-space: pre;
+  tab-size: 2;
+  /* Fade out towards the bottom, where the lines are cut off. */
+  mask-image: linear-gradient(to bottom, #000 60%, transparent);
+}
 .kind-icon { color: var(--muted-foreground); }
 .kind-icon.folder { color: var(--folder); }
 .kind-icon.image, .kind-icon.spreadsheet { color: var(--green); }
@@ -598,7 +612,7 @@ footer.v-bar {
 @media (prefers-reduced-motion: reduce) { #v-plane.animate { transition: none; } }
 /* Absolutely positioned, so the size limits resolve against the stage and large
    media can never push the video controls out of view. */
-#v-plane img, #v-plane video {
+#v-plane > img, #v-plane > video {
   position: absolute;
   inset: 0;
   margin: auto;
@@ -606,7 +620,7 @@ footer.v-bar {
   max-height: 100%;
   object-fit: contain;
 }
-#v-plane img {
+#v-plane > img {
   width: 100%;
   height: 100%;
   user-select: none;
@@ -614,7 +628,7 @@ footer.v-bar {
   -webkit-user-drag: none;
   cursor: zoom-in;
 }
-#v-stage.zoomed img { cursor: grab; }
+#v-stage.zoomed #v-plane > img { cursor: grab; }
 /* Audio: cover art (or a note icon), the title and the player, centred. */
 .v-audio {
   position: absolute;
@@ -656,8 +670,64 @@ footer.v-bar {
 .v-wave.ready { opacity: 1; }
 .v-wave canvas { display: block; width: 100%; height: 100%; }
 .v-error { color: var(--lightbox-muted); font-size: 13px; text-align: center; }
+/* PDFs: the browser's PDF viewer. On wider screens it leaves room for the
+   previous/next buttons, so they don't cover its scrollbar. */
+#v-plane .v-doc { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--lightbox-control); }
+@media (min-width: 640px) { #v-plane .v-doc { left: 88px; width: calc(100% - 176px); } }
+
+/* Text, code and Markdown: a scrolling page, centred. */
+.v-text {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 24px 16px 48px;
+  touch-action: pan-x pan-y; /* scroll natively; the stage blocks touch gestures */
+  outline: none;
+  color: var(--lightbox-foreground);
+}
+@media (min-width: 640px) { .v-text { padding-left: 88px; padding-right: 88px; } }
+/* Phones swipe between files instead, so the buttons don't cover the text. */
+@media (max-width: 639px) { #viewer.reading .v-nav { display: none; } }
+.v-page { max-width: 860px; margin: 0 auto; }
+.v-code {
+  margin: 0;
+  font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 4;
+}
+.v-note { margin: 16px 0 0; color: var(--lightbox-muted); font-size: 13px; }
+
+.markdown { font-size: 15px; line-height: 1.65; overflow-wrap: break-word; }
+.markdown > :first-child { margin-top: 0; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 {
+  margin: 1.6em 0 .6em;
+  line-height: 1.25;
+  font-weight: 600;
+}
+.markdown h1 { font-size: 1.9em; }
+.markdown h2 { font-size: 1.45em; padding-bottom: .3em; border-bottom: 1px solid var(--lightbox-border); }
+.markdown h3 { font-size: 1.2em; }
+.markdown p, .markdown ul, .markdown ol, .markdown pre, .markdown table, .markdown blockquote { margin: 0 0 1em; }
+.markdown ul, .markdown ol { padding-left: 1.6em; }
+.markdown li > input[type="checkbox"] { margin-right: .4em; }
+.markdown a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.markdown code {
+  padding: .15em .35em;
+  font: .88em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--lightbox-control);
+}
+.markdown pre { padding: 12px 14px; overflow-x: auto; background: var(--lightbox-control); }
+.markdown pre code { padding: 0; background: none; font-size: 13px; }
+.markdown blockquote { padding-left: 1em; border-left: 3px solid var(--lightbox-border); color: var(--lightbox-muted); }
+.markdown img { max-width: 100%; height: auto; }
+.markdown hr { border: 0; border-top: 1px solid var(--lightbox-border); margin: 2em 0; }
+.markdown table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.markdown th, .markdown td { padding: 6px 12px; border: 1px solid var(--lightbox-border); }
+.markdown th { font-weight: 600; text-align: left; }
+
 #v-plane > .v-error { position: absolute; inset: 0; display: grid; place-content: center; padding: 0 64px; }
-#v-stage.dragging img { cursor: grabbing; }
+#v-stage.dragging #v-plane > img { cursor: grabbing; }
 .v-nav {
   position: absolute;
   top: 50%;

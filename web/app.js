@@ -1,6 +1,7 @@
 import { icon, fillIcons } from './icons.js';
 import { $, el, enc, join, formatBytes, formatDate, barPeaks } from './util.js';
 import { openViewer, closeViewer, viewerOpen } from './viewer.js';
+import { viewKind, fetchText } from './docs.js';
 
 fillIcons();
 
@@ -216,7 +217,7 @@ for (const v of ['grid', 'list']) {
 
 /* ---------- Items ---------- */
 
-const viewable = () => sorted.filter((e) => e.type === 'image' || e.type === 'video' || e.type === 'audio');
+const viewable = () => sorted.filter(viewKind);
 
 function render() {
   renderControls();
@@ -253,7 +254,7 @@ function openLink(e, cls) {
   a.addEventListener('click', (ev) => {
     if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return; // let the browser open it
     ev.preventDefault();
-    if (e.type === 'other') return select(e); // no viewer for these, show details instead
+    if (!viewKind(e)) return select(e); // no viewer for these, show details instead
     const list = viewable();
     openViewer(list, list.indexOf(e));
   });
@@ -289,6 +290,30 @@ function thumbImg(e, onFail) {
       else if (img.isConnected) img.replaceWith(wave);
     });
   return img;
+}
+
+// Text files show their first lines in place of the icon in box, once box
+// scrolls into view. The icon stays for empty, binary or unreadable files.
+const TEXT_LINES = 24;
+const textLoads = new WeakMap(); // box -> function that loads its preview
+const textObserver = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue;
+    textObserver.unobserve(entry.target);
+    textLoads.get(entry.target)();
+  }
+}, { rootMargin: '200px' });
+
+function textThumb(e, box) {
+  if (viewKind(e) !== 'text' || !e.size) return;
+  textLoads.set(box, async () => {
+    const res = await fetchText(e, 2048).catch(() => null);
+    if (!res || res.binary) return;
+    const pre = el('pre', 'thumb-text');
+    pre.textContent = res.text.split('\n').slice(0, TEXT_LINES).join('\n');
+    box.replaceChildren(pre);
+  });
+  textObserver.observe(box);
 }
 
 const WAVE_BARS = 40; // bars in a waveform thumbnail
@@ -352,6 +377,7 @@ function renderGrid() {
       if (e.type === 'audio') thumb.append(el('span', 'folder-badge audio', icon('music')));
     } else {
       plain();
+      textThumb(e, thumb);
     }
 
     const meta = el('div', 'meta');
@@ -448,6 +474,7 @@ function renderDetails() {
   const img = thumbImg(e, () => (preview.innerHTML = kindIcon(e)));
   if (img) preview.append(img);
   else preview.innerHTML = kindIcon(e);
+  if (!img) textThumb(e, preview);
 
   const body = el('div', 'd-body');
   const name = el('p', 'd-name');

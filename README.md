@@ -6,6 +6,7 @@ same network, including uploading files into it.
 
 - Grid or list view, with thumbnails for images, videos and audio (album art, or else a waveform), and a cover of up to four photos for folders
 - Full-screen viewer with swipe and arrow-key navigation, zoom and pan for photos, video streaming and seeking, and an audio player with a waveform to seek in, which plays through a folder like an album
+- Read PDFs, text and code files, and rendered Markdown in the viewer; text files show their first lines as a thumbnail
 - Details panel with size, date and location, including the total size of a folder
 - Download single files, or whole folders as a ZIP
 - Upload from any device: pick files or drag and drop, with progress bars; on a computer, whole folders too
@@ -103,3 +104,7 @@ git push origin v0.2.0
 ## License
 
 [GPL-3.0](LICENSE)
+
+The web UI bundles [Inter](https://rsms.me/inter/) ([OFL](web/fonts/OFL.txt)),
+icons from [Lucide](https://lucide.dev) (ISC) and
+[marked](https://marked.js.org) ([MIT](web/vendor/marked-LICENSE.txt)) for Markdown.
