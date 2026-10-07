@@ -1,6 +1,7 @@
 // Documents the viewer can show: PDFs (in the browser's own PDF viewer) and
 // text, code and Markdown files (fetched and shown as text, Markdown rendered).
 import { el, enc } from './util.js';
+import { highlight } from './syntax.js';
 
 const textExts = new Set((
   'txt text log md markdown rst csv tsv ini cfg conf env properties ' +
@@ -61,6 +62,7 @@ function safeHref(href, dir) {
 
 // Renders Markdown to HTML that is safe to insert: raw HTML in the file shows
 // as text instead of being run, and links and images go through safeHref.
+// Code blocks with a language get coloured once their grammar has loaded.
 export async function renderMarkdown(text, dir) {
   const { Marked } = await import('./vendor/marked.esm.js');
   const md = new Marked({
@@ -75,6 +77,10 @@ export async function renderMarkdown(text, dir) {
     if (a.getAttribute('href').startsWith('#')) continue;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
+  }
+  for (const code of box.querySelectorAll('pre > code[class*="language-"]')) {
+    const lang = code.className.match(/language-(\S+)/)[1];
+    highlight(code.textContent, lang).then((html) => html && (code.innerHTML = html));
   }
   return box;
 }

@@ -2,6 +2,7 @@
 import { icon } from './icons.js';
 import { $, el, enc, formatBytes, barPeaks } from './util.js';
 import { viewKind, fetchText, MAX_TEXT, isMarkdown, renderMarkdown } from './docs.js';
+import { highlight } from './syntax.js';
 
 const viewer = $('#viewer');
 const stage = $('#v-stage');
@@ -120,6 +121,9 @@ async function loadText(e, box) {
   } else {
     body = el('pre', 'v-code');
     body.textContent = res.text;
+    // Shown plain straight away, coloured once the language has loaded.
+    const ext = e.name.slice(e.name.lastIndexOf('.') + 1);
+    highlight(res.text, ext).then((html) => html && (body.innerHTML = html));
   }
   page.replaceChildren(body);
   if (res.truncated) {
