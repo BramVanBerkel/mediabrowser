@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      # For the tests that run ffmpeg, such as TestWaveform.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: go vet ./...
       - run: go test ./...
       - run: make build

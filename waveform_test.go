@@ -35,6 +35,9 @@ func writeWAV(t *testing.T, name string, samples []int16) {
 func TestWaveform(t *testing.T) {
 	ffmpeg, err := exec.LookPath("ffmpeg")
 	if err != nil {
+		if os.Getenv("CI") != "" {
+			t.Fatal("ffmpeg not found; CI installs it so this test runs")
+		}
 		t.Skip("ffmpeg not found")
 	}
 	dir := t.TempDir()
