@@ -95,9 +95,11 @@ func (s *server) routes() http.Handler {
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
 	mux.HandleFunc("GET /api/list", s.handleList)
 	mux.HandleFunc("GET /api/search", s.handleSearch)
+	mux.HandleFunc("GET /api/stats", s.handleStats)
 	mux.HandleFunc("POST /api/upload", s.handleUpload)
 	mux.HandleFunc("GET /media/{path...}", s.handleMedia)
 	mux.HandleFunc("GET /thumb/{path...}", s.handleThumb)
+	mux.HandleFunc("GET /zip/{path...}", s.handleZip)
 
 	if s.auth == nil {
 		return mux

@@ -44,7 +44,8 @@ func (a *auth) valid(r *http.Request) bool {
 
 func (a *auth) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/login" || a.valid(r) {
+		// The login page needs the web font before anyone is logged in.
+		if r.URL.Path == "/login" || strings.HasPrefix(r.URL.Path, "/static/fonts/") || a.valid(r) {
 			next.ServeHTTP(w, r)
 			return
 		}

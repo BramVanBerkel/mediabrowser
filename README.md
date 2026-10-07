@@ -4,10 +4,13 @@ A simple web-based media browser for your local network. Run one executable,
 point it at a folder, and browse it from any phone, tablet or computer on the
 same network, including uploading files into it.
 
-- Thumbnail grid for images and videos, with folder previews
-- Full-screen viewer with swipe and arrow-key navigation, video streaming and seeking
+- Grid or list view, with thumbnails for images and videos and a cover photo for folders
+- Full-screen viewer with swipe and arrow-key navigation, zoom and pan for photos, and video streaming and seeking
+- Details panel with size, date and location, including the total size of a folder
+- Download single files, or whole folders as a ZIP
 - Upload from any device: pick files or drag and drop, with progress bars
-- Search by file name across subfolders, and sort by name, date or size
+- Search by file name across subfolders, and sort by name, date, size or type
+- Light and dark theme, following the system or chosen by hand
 - QR code at startup, so a phone can open it instantly
 - Optional password protection
 - A single executable with the web UI built in; no install, no database

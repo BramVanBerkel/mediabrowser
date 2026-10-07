@@ -4,57 +4,102 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Media Browser</title>
+<script>
+  // Apply the saved theme before the first paint, so the page never flashes.
+  try {
+    const t = localStorage.getItem('theme');
+    if (t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    }
+  } catch {}
+</script>
+<link rel="preload" href="/static/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<header>
-  <nav id="crumbs" aria-label="Folder path"></nav>
-  <div class="tools">
-    <label class="search">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-      <input id="search" type="search" placeholder="Search" autocomplete="off" enterkeyhint="search" aria-label="Search file names">
-    </label>
-    <label class="sort">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg>
-      <select id="sort" aria-label="Sort by">
-        <option value="name">Name A–Z</option>
-        <option value="name-desc">Name Z–A</option>
-        <option value="newest">Newest first</option>
-        <option value="oldest">Oldest first</option>
-        <option value="largest">Largest first</option>
-        <option value="smallest">Smallest first</option>
-      </select>
-    </label>
-  </div>
-  <label class="btn" id="upload-btn">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-5 5m5-5 5 5M4 20h16"/></svg>
-    <span>Upload</span>
-    <input type="file" id="file-input" multiple hidden>
+<header id="toolbar">
+  <label class="search">
+    <i data-icon="search"></i>
+    <input id="search" type="search" placeholder="Search files and folders…" autocomplete="off" enterkeyhint="search" aria-label="Search file names">
   </label>
+  <div class="controls">
+    <div class="group">
+      <span class="mobile-label">Sort</span>
+      <select id="sort" aria-label="Sort by">
+        <option value="name">Name</option>
+        <option value="modified">Modified</option>
+        <option value="size">Size</option>
+        <option value="type">Type</option>
+      </select>
+      <button id="sort-dir" class="icon-btn" type="button"></button>
+    </div>
+    <span class="divider" aria-hidden="true"></span>
+    <div class="right">
+      <label class="icon-btn group" id="upload-btn" title="Upload files to this folder">
+        <i data-icon="upload"></i>
+        <span class="mobile-label">Upload</span>
+        <input type="file" id="file-input" multiple hidden aria-label="Upload files">
+      </label>
+      <span class="divider" aria-hidden="true"></span>
+      <div class="group">
+        <button id="view-grid" class="icon-btn" type="button" aria-label="Grid view"><i data-icon="layout-grid"></i></button>
+        <button id="view-list" class="icon-btn" type="button" aria-label="List view"><i data-icon="list"></i></button>
+      </div>
+    </div>
+    <span class="divider" aria-hidden="true"></span>
+    <div class="theme">
+      <button id="theme-btn" class="icon-btn" type="button" aria-label="Theme" aria-haspopup="menu" aria-expanded="false"></button>
+      <div id="theme-menu" role="menu" hidden>
+        <button type="button" role="menuitemradio" data-theme="system"><i data-icon="monitor"></i>System</button>
+        <button type="button" role="menuitemradio" data-theme="light"><i data-icon="sun"></i>Light</button>
+        <button type="button" role="menuitemradio" data-theme="dark"><i data-icon="moon"></i>Dark</button>
+      </div>
+    </div>
+  </div>
 </header>
+
+<nav id="crumbs" aria-label="Folder path"></nav>
 
 <section id="uploads" hidden></section>
 
-<main>
-  <div id="grid"></div>
-  <p id="message" hidden></p>
-</main>
+<div class="layout">
+  <main>
+    <div id="items"></div>
+    <div id="empty" hidden>
+      <i data-icon="folder"></i>
+      <p id="empty-text"></p>
+    </div>
+    <p id="note" hidden></p>
+    <p id="count" hidden></p>
+  </main>
+  <aside id="details" hidden aria-label="Details"></aside>
+</div>
 
 <div id="drop" hidden><div>Drop files to upload here</div></div>
 
-<div id="viewer" hidden>
-  <div id="v-stage"></div>
-  <button id="v-prev" class="v-btn" aria-label="Previous">&#8249;</button>
-  <button id="v-next" class="v-btn" aria-label="Next">&#8250;</button>
-  <div id="v-bar">
-    <span id="v-caption"></span>
-    <a id="v-download" class="v-btn" aria-label="Download" download>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>
-    </a>
-    <button id="v-close" class="v-btn" aria-label="Close">&#215;</button>
+<div id="viewer" hidden tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="v-title">
+  <header class="v-bar">
+    <h2 id="v-title"></h2>
+    <span id="v-count"></span>
+    <a id="v-download" class="v-btn" aria-label="Download" title="Download" download><i data-icon="download"></i></a>
+    <button id="v-close" class="v-btn" type="button" aria-label="Close preview" title="Close preview (Esc)"><i data-icon="x"></i></button>
+  </header>
+  <div id="v-stage">
+    <div id="v-plane"></div>
+    <button id="v-prev" class="v-btn v-nav" type="button" aria-label="Previous" title="Previous"><i data-icon="chevron-left"></i></button>
+    <button id="v-next" class="v-btn v-nav" type="button" aria-label="Next" title="Next"><i data-icon="chevron-right"></i></button>
   </div>
+  <footer class="v-bar">
+    <span id="v-info"><span id="v-kind"></span><span id="v-size"></span></span>
+    <div id="v-zoom" role="group" aria-label="Image zoom">
+      <button id="v-zoom-out" class="v-btn" type="button" aria-label="Zoom out" title="Zoom out (−)"><i data-icon="zoom-out"></i></button>
+      <output id="v-zoom-level" aria-label="Zoom level">100%</output>
+      <button id="v-zoom-in" class="v-btn" type="button" aria-label="Zoom in" title="Zoom in (+)"><i data-icon="zoom-in"></i></button>
+      <button id="v-zoom-reset" class="v-btn" type="button" aria-label="Reset zoom" title="Fit image (0)"><i data-icon="rotate-ccw"></i></button>
+    </div>
+  </footer>
 </div>
 
-<script src="/static/app.js"></script>
+<script type="module" src="/static/app.js"></script>
 </body>
 </html>
