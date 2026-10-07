@@ -198,13 +198,19 @@ func (t *thumbnailer) fromFFmpeg(rel, kind, out string) error {
 	return errNoThumb
 }
 
+// ffmpegCmd returns an ffmpeg command with args, quiet apart from errors and
+// never waiting for input. Every use of ffmpeg starts here.
+func (t *thumbnailer) ffmpegCmd(ctx context.Context, args ...string) *exec.Cmd {
+	args = append([]string{"-hide_banner", "-loglevel", "error", "-nostdin"}, args...)
+	return exec.CommandContext(ctx, t.ffmpeg, args...)
+}
+
 // runFFmpeg runs ffmpeg with args, whose last element is the output file, and
 // succeeds only if that file was written.
 func (t *thumbnailer) runFFmpeg(args ...string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	args = append([]string{"-hide_banner", "-loglevel", "error", "-nostdin", "-y"}, args...)
-	if err := exec.CommandContext(ctx, t.ffmpeg, args...).Run(); err != nil {
+	if err := t.ffmpegCmd(ctx, append([]string{"-y"}, args...)...).Run(); err != nil {
 		return err
 	}
 	if st, err := os.Stat(args[len(args)-1]); err != nil || st.Size() == 0 {

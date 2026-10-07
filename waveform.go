@@ -10,7 +10,6 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -38,8 +37,7 @@ func (t *thumbnailer) makeWaveform(rel, out string) error {
 	defer cancel()
 	// Decode the first audio stream to mono 16-bit samples on stdout, so even
 	// long files never sit in memory as a whole.
-	cmd := exec.CommandContext(ctx, t.ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin",
-		"-i", in, "-map", "0:a:0", "-ac", "1", "-ar", strconv.Itoa(waveformRate), "-f", "s16le", "-")
+	cmd := t.ffmpegCmd(ctx, "-i", in, "-map", "0:a:0", "-ac", "1", "-ar", strconv.Itoa(waveformRate), "-f", "s16le", "-")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err

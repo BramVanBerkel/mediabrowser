@@ -74,7 +74,7 @@ func main() {
 	fmt.Printf("mediabrowser %s, serving %s\n", version, dir)
 	fmt.Printf("Thumbnail cache: %s\n", cacheDir)
 	if ffmpeg == "" {
-		fmt.Println("ffmpeg not found on PATH: videos will not get thumbnails")
+		fmt.Println("ffmpeg not found on PATH: no thumbnails for videos, HEIC photos or album art, and no audio waveforms")
 	}
 	if *password != "" {
 		fmt.Println("Password protection enabled")
