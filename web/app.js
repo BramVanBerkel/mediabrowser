@@ -1,5 +1,5 @@
 import { icon, fillIcons } from './icons.js';
-import { $, el, enc, join, formatBytes, formatDate } from './util.js';
+import { $, el, enc, join, formatBytes, formatDate, barPeaks } from './util.js';
 import { openViewer, closeViewer, viewerOpen } from './viewer.js';
 
 fillIcons();
@@ -273,7 +273,8 @@ function infoButton(e) {
   return b;
 }
 
-// Thumbnail image that falls back to the kind icon if there is none.
+// Thumbnail image that falls back to the kind icon if there is none. Audio
+// without cover art tries its waveform first.
 function thumbImg(e, onFail) {
   const src = thumbSrc(e);
   if (!src) return null;
@@ -282,8 +283,30 @@ function thumbImg(e, onFail) {
   img.decoding = 'async';
   img.alt = '';
   img.src = src;
-  img.onerror = onFail;
+  img.onerror = e.type !== 'audio' ? onFail : () =>
+    waveThumb(e).then((wave) => {
+      if (!wave) onFail();
+      else if (img.isConnected) img.replaceWith(wave);
+    });
   return img;
+}
+
+const WAVE_BARS = 40; // bars in a waveform thumbnail
+
+// An audio file's waveform as an SVG, coloured by CSS so it follows the theme.
+// Resolves to null if the server has none (no ffmpeg, or an unreadable file).
+async function waveThumb(e) {
+  const res = await fetch('/waveform/' + enc(e.full) + '?v=' + e.mtime).catch(() => null);
+  const data = res && res.ok ? await res.json().catch(() => null) : null;
+  if (!data || !data.peaks || !data.peaks.length) return null;
+  // Bars are 3 units wide with a 1 unit gap, in a 100 unit tall box the SVG
+  // stretches to fill its thumbnail.
+  const rects = barPeaks(data.peaks, WAVE_BARS).map((v, i) => {
+    const h = Math.max(2, v);
+    return `<rect x="${i * 4}" y="${(100 - h) / 2}" width="3" height="${h}"/>`;
+  });
+  return el('span', 'thumb-img thumb-wave',
+    `<svg viewBox="0 0 ${WAVE_BARS * 4 - 1} 100" preserveAspectRatio="none" aria-hidden="true">${rects.join('')}</svg>`);
 }
 
 // A folder's cover made of up to four of its thumbnails. Tiles that fail to

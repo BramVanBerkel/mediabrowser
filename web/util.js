@@ -20,5 +20,19 @@ export function formatBytes(n) {
   return (i ? n.toFixed(1) : n) + ' ' + units[i];
 }
 
+// Reduces a waveform's peaks (0 to 100) to n bars, each the loudest of the
+// peaks it covers. With fewer peaks than bars, peaks span several bars.
+export function barPeaks(peaks, n) {
+  const bars = [];
+  for (let i = 0; i < n; i++) {
+    const from = Math.floor((i * peaks.length) / n);
+    const to = Math.max(from + 1, Math.floor(((i + 1) * peaks.length) / n));
+    let v = 0;
+    for (let j = from; j < to; j++) v = Math.max(v, peaks[j]);
+    bars.push(v);
+  }
+  return bars;
+}
+
 const dateFormat = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 export const formatDate = (ms) => dateFormat.format(new Date(ms));

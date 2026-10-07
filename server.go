@@ -109,6 +109,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /api/upload", s.handleUpload)
 	mux.HandleFunc("GET /media/{path...}", s.handleMedia)
 	mux.HandleFunc("GET /thumb/{path...}", s.handleThumb)
+	mux.HandleFunc("GET /waveform/{path...}", s.handleWaveform)
 	mux.HandleFunc("GET /zip/{path...}", s.handleZip)
 
 	if s.auth == nil {

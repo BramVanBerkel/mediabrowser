@@ -49,7 +49,7 @@ type thumbnailer struct {
 	group    singleflight.Group
 
 	mu     sync.Mutex
-	failed map[string]bool // cache keys that could not be thumbnailed this run
+	failed map[string]bool // cache files that could not be made this run
 }
 
 func newThumbnailer(root *os.Root, rootDir, cacheDir, ffmpeg string) *thumbnailer {
@@ -69,6 +69,13 @@ func (t *thumbnailer) get(rel string) (string, error) {
 	if kind == "other" {
 		return "", errNoThumb
 	}
+	return t.cached(rel, ".jpg", func(out string) error { return t.generate(rel, kind, out) })
+}
+
+// cached returns the path of the cache file with extension ext that gen makes
+// from rel, calling gen only if there is none yet. Cache files are keyed by
+// rel's path, size and modification time, so a changed file gets new ones.
+func (t *thumbnailer) cached(rel, ext string, gen func(out string) error) (string, error) {
 	st, err := t.root.Stat(filepath.FromSlash(rel))
 	if err != nil {
 		return "", err
@@ -78,28 +85,31 @@ func (t *thumbnailer) get(rel string) (string, error) {
 	}
 	sum := sha1.Sum(fmt.Appendf(nil, "%s\x00%d\x00%d", rel, st.Size(), st.ModTime().UnixNano()))
 	key := hex.EncodeToString(sum[:])
-	out := filepath.Join(t.cacheDir, key[:2], key+".jpg")
+	out := filepath.Join(t.cacheDir, key[:2], key+ext)
 	if _, err := os.Stat(out); err == nil {
 		return out, nil
 	}
 
 	t.mu.Lock()
-	failed := t.failed[key]
+	failed := t.failed[key+ext]
 	t.mu.Unlock()
 	if failed {
 		return "", errNoThumb
 	}
 
-	_, err, _ = t.group.Do(key, func() (any, error) {
+	_, err, _ = t.group.Do(key+ext, func() (any, error) {
 		if _, err := os.Stat(out); err == nil {
 			return nil, nil
 		}
 		t.sem <- struct{}{}
 		defer func() { <-t.sem }()
-		err := t.generate(rel, kind, out)
+		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
+			return nil, err
+		}
+		err := gen(out)
 		if err != nil {
 			t.mu.Lock()
-			t.failed[key] = true
+			t.failed[key+ext] = true
 			t.mu.Unlock()
 		}
 		return nil, err
@@ -111,9 +121,6 @@ func (t *thumbnailer) get(rel string) (string, error) {
 }
 
 func (t *thumbnailer) generate(rel, kind, out string) error {
-	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
-		return err
-	}
 	if kind == "image" && goImageExts[strings.ToLower(path.Ext(rel))] {
 		err := t.fromImage(rel, out)
 		if err == nil || t.ffmpeg == "" {

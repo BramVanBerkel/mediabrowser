@@ -288,6 +288,9 @@ main {
 @media (min-width: 640px) { main { padding-left: 24px; padding-right: 24px; } }
 
 .thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb-wave { padding: 15% 12%; color: color-mix(in oklab, var(--muted-foreground) 70%, transparent); }
+.thumb-wave svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+.list .thumb-wave { padding: 8px 4px; }
 .kind-icon { color: var(--muted-foreground); }
 .kind-icon.folder { color: var(--folder); }
 .kind-icon.image, .kind-icon.spreadsheet { color: var(--green); }
@@ -331,7 +334,7 @@ main {
   place-items: center;
   overflow: hidden;
 }
-.card .thumb.plain { border-bottom: 1px solid var(--border); }
+.card .thumb.plain, .card .thumb:has(.thumb-wave) { border-bottom: 1px solid var(--border); }
 .card .thumb .kind-icon { width: 32px; height: 32px; stroke-width: 1.5; }
 
 /* A folder's cover: 2 tiles side by side, 3 with the first one tall, or 2×2. */
@@ -639,6 +642,19 @@ footer.v-bar {
 }
 .v-cover.none .i { width: 64px; height: 64px; stroke-width: 1; color: var(--lightbox-muted); }
 .v-audio audio { width: min(480px, 100%); }
+.v-wave {
+  --wave-played: var(--lightbox-foreground);
+  --wave-rest: oklch(1 0 0 / 30%);
+  width: min(480px, 100%);
+  height: 56px;
+  flex-shrink: 0;
+  cursor: pointer;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.v-wave.ready { opacity: 1; }
+.v-wave canvas { display: block; width: 100%; height: 100%; }
 .v-error { color: var(--lightbox-muted); font-size: 13px; text-align: center; }
 #v-plane > .v-error { position: absolute; inset: 0; display: grid; place-content: center; padding: 0 64px; }
 #v-stage.dragging img { cursor: grabbing; }

@@ -1,6 +1,6 @@
 // Fullscreen lightbox for images, videos and audio, with zoom and pan for images.
 import { icon } from './icons.js';
-import { $, el, enc, formatBytes } from './util.js';
+import { $, el, enc, formatBytes, barPeaks } from './util.js';
 
 const viewer = $('#viewer');
 const stage = $('#v-stage');
@@ -96,10 +96,11 @@ async function mediaError(m) {
     const res = await fetch(m.src, { method: 'HEAD' }).catch(() => null);
     if (!res || !res.ok) msg = unloaded;
   }
+  m.parentNode?.querySelector('.v-wave')?.remove(); // nothing to seek in
   m.replaceWith(el('p', 'v-error', msg));
 }
 
-// The cover art (or a note icon when there is none) above the player.
+// The cover art (or a note icon when there is none) and the waveform above the player.
 function audioCard(e, player) {
   const card = el('div', 'v-audio');
   const none = () => el('div', 'v-cover none', icon('music'));
@@ -108,8 +109,87 @@ function audioCard(e, player) {
   cover.draggable = false;
   cover.src = '/thumb/' + enc(e.full) + '?v=' + e.mtime;
   cover.onerror = () => cover.replaceWith(none());
-  card.append(cover, player);
+  card.append(cover, waveform(e, player), player);
   return card;
+}
+
+const BAR = 3; // waveform bar width and gap, in CSS px
+const GAP = 1;
+
+// The loudness of the whole track as bars, coloured in up to the playhead.
+// Clicking or dragging seeks. The server makes the data with ffmpeg; without
+// it (or for a file ffmpeg can't read) the waveform leaves itself out.
+function waveform(e, player) {
+  const wrap = el('div', 'v-wave');
+  const canvas = el('canvas');
+  canvas.setAttribute('aria-hidden', 'true'); // the player's controls seek accessibly
+  wrap.append(canvas);
+  let peaks = null;
+
+  function draw() {
+    if (!peaks || !wrap.isConnected) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const style = getComputedStyle(wrap);
+    const played = style.getPropertyValue('--wave-played');
+    const rest = style.getPropertyValue('--wave-rest');
+    const n = Math.max(1, Math.floor((w + GAP) / (BAR + GAP)));
+    const bw = (w - GAP * (n - 1)) / n; // stretched a little to fill the width exactly
+    const progress = player.duration ? player.currentTime / player.duration : 0;
+    barPeaks(peaks, n).forEach((v, i) => {
+      const bh = Math.max(2, (v / 100) * h);
+      ctx.fillStyle = (i + 0.5) / n <= progress ? played : rest;
+      ctx.fillRect(i * (bw + GAP), (h - bh) / 2, bw, bh);
+    });
+  }
+
+  // Redraw every frame while playing, and once on any other change.
+  let frame = 0;
+  const tick = () => {
+    draw();
+    frame = player.paused || !wrap.isConnected ? 0 : requestAnimationFrame(tick);
+  };
+  player.addEventListener('play', () => frame || tick());
+  for (const type of ['pause', 'seeked', 'loadedmetadata', 'ended']) player.addEventListener(type, draw);
+  new ResizeObserver(draw).observe(wrap);
+
+  const seek = (ev) => {
+    if (!player.duration) return;
+    const r = wrap.getBoundingClientRect();
+    player.currentTime = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)) * player.duration;
+    draw();
+  };
+  // Pointer events stop here, so a drag along the waveform never swipes to another file.
+  wrap.addEventListener('pointerdown', (ev) => {
+    ev.stopPropagation();
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+    wrap.setPointerCapture(ev.pointerId);
+    seek(ev);
+  });
+  wrap.addEventListener('pointermove', (ev) => {
+    ev.stopPropagation();
+    if (wrap.hasPointerCapture(ev.pointerId)) seek(ev);
+  });
+  wrap.addEventListener('pointerup', (ev) => ev.stopPropagation());
+
+  fetch('/waveform/' + enc(e.full) + '?v=' + e.mtime)
+    .then((res) => (res.ok ? res.json() : Promise.reject()))
+    .then((data) => {
+      peaks = data.peaks;
+      if (!peaks || !peaks.length) return wrap.remove();
+      wrap.classList.add('ready');
+      draw();
+    })
+    .catch(() => wrap.remove());
+  return wrap;
 }
 
 function step(delta) {

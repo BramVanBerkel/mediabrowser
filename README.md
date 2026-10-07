@@ -4,8 +4,8 @@ A simple web-based media browser for your local network. Run one executable,
 point it at a folder, and browse it from any phone, tablet or computer on the
 same network, including uploading files into it.
 
-- Grid or list view, with thumbnails for images, videos and album art, and a cover of up to four photos for folders
-- Full-screen viewer with swipe and arrow-key navigation, zoom and pan for photos, video streaming and seeking, and an audio player that plays through a folder like an album
+- Grid or list view, with thumbnails for images, videos and audio (album art, or else a waveform), and a cover of up to four photos for folders
+- Full-screen viewer with swipe and arrow-key navigation, zoom and pan for photos, video streaming and seeking, and an audio player with a waveform to seek in, which plays through a folder like an album
 - Details panel with size, date and location, including the total size of a folder
 - Download single files, or whole folders as a ZIP
 - Upload from any device: pick files or drag and drop, with progress bars; on a computer, whole folders too
@@ -53,7 +53,7 @@ It prints the addresses to open, plus a QR code for your phone.
 ### Video thumbnails
 
 Image thumbnails work out of the box. For **video** thumbnails (and HEIC/iPhone
-photo thumbnails and album art from audio files), install [ffmpeg](https://ffmpeg.org) and make sure it's on
+photo thumbnails, and album art and waveforms for audio), install [ffmpeg](https://ffmpeg.org) and make sure it's on
 your `PATH`:
 
 ```sh
