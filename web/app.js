@@ -54,12 +54,11 @@ const kindIcons = {
 };
 const kindIcon = (e) => icon(kindIcons[kindOf(e)], 'kind-icon ' + kindOf(e));
 
+const previewSrc = (e, p) => '/thumb/' + enc(join(e.full, p.path)) + '?v=' + p.mtime;
+
 function thumbSrc(e) {
   if (e.type === 'image' || e.type === 'video') return '/thumb/' + enc(e.full) + '?v=' + e.mtime;
-  if (e.type === 'dir' && e.preview && e.preview.length) {
-    const p = e.preview[0];
-    return '/thumb/' + enc(join(e.full, p.path)) + '?v=' + p.mtime;
-  }
+  if (e.type === 'dir' && e.preview && e.preview.length) return previewSrc(e, e.preview[0]);
   return null;
 }
 
@@ -287,6 +286,27 @@ function thumbImg(e, onFail) {
   return img;
 }
 
+// A folder's cover made of up to four of its thumbnails. Tiles that fail to
+// load stay empty; if all of them fail, onFail shows the folder icon instead.
+function folderMosaic(e, onFail) {
+  const items = e.preview.slice(0, 4);
+  const mosaic = el('div', 'mosaic n' + items.length);
+  let failed = 0;
+  for (const p of items) {
+    const img = el('img', 'thumb-img');
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.alt = '';
+    img.src = previewSrc(e, p);
+    img.onerror = () => {
+      img.replaceWith(el('span', 'tile-empty'));
+      if (++failed === items.length) onFail();
+    };
+    mosaic.append(img);
+  }
+  return mosaic;
+}
+
 const folderOf = (e) => (e.path && e.path.includes('/') ? e.path.slice(0, e.path.lastIndexOf('/')) : '');
 
 function renderGrid() {
@@ -301,7 +321,7 @@ function renderGrid() {
       thumb.classList.add('plain');
       thumb.innerHTML = kindIcon(e);
     };
-    const img = thumbImg(e, plain);
+    const img = e.type === 'dir' && e.preview && e.preview.length > 1 ? folderMosaic(e, plain) : thumbImg(e, plain);
     if (img) {
       thumb.append(img);
       if (e.type === 'video') thumb.append(el('span', 'play-badge', '<span>' + icon('play') + '</span>'));

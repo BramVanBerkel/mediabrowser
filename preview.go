@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	previewCount   = 1  // media files shown in a folder's preview (its cover)
+	previewCount   = 4  // media files shown in a folder's preview (a 2×2 mosaic)
 	previewMaxDirs = 20 // folders searched, so huge trees stay fast
 )
 
