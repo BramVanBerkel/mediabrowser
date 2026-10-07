@@ -35,6 +35,9 @@ const names = {
   yaml: 'yml yaml',
 };
 
+// The grammars bundled in web/vendor, which `make vendor` reads from here.
+export const bundledLanguages = Object.keys(names);
+
 const languages = new Map();
 for (const [lang, list] of Object.entries(names)) {
   for (const n of list.split(' ')) languages.set(n, lang);

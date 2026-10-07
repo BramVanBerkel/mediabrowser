@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "description": "Browser libraries bundled into web/vendor by `make vendor`. Not needed to build mediabrowser.",
+  "type": "module",
+  "scripts": {
+    "vendor": "node scripts/vendor.js"
+  },
+  "devDependencies": {
+    "@highlightjs/cdn-assets": "11.12.0",
+    "marked": "18.1.0"
+  }
+}

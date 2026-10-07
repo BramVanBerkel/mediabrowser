@@ -3,6 +3,7 @@
 #   make run DIR=~/Pictures  build and start serving DIR
 #   make dist              build for Mac, Windows and Linux into dist/
 #   make clean             remove build output
+#   make vendor            update web/vendor from package.json (needs Node)
 
 BINARY := mediabrowser
 DIR    ?= .
@@ -10,7 +11,7 @@ PORT   ?= 8080
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: build run dist clean
+.PHONY: build run dist clean vendor
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BINARY) .
@@ -28,3 +29,8 @@ dist:
 
 clean:
 	rm -rf $(BINARY) dist
+
+# The browser libraries in web/vendor are committed, so building needs only Go.
+vendor:
+	npm ci --ignore-scripts --no-audit --no-fund
+	npm run --silent vendor

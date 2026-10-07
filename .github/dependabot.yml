@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # The browser libraries in web/vendor. A PR here only bumps package.json and
+  # the lockfile: check out its branch, run `make vendor` and push the result.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      web:
+        patterns: ["*"]

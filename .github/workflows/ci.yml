@@ -14,4 +14,23 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go vet ./...
+      - run: go test ./...
       - run: make build
+
+  # web/vendor must be exactly what `make vendor` makes from package.json, so a
+  # version bump (say, a Dependabot PR) fails here until it is re-run.
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: make vendor
+      - name: Check web/vendor is up to date
+        run: |
+          if [ -n "$(git status --porcelain web/vendor)" ]; then
+            git status --short web/vendor
+            echo "::error::web/vendor is out of date: run 'make vendor' and commit the result"
+            exit 1
+          fi

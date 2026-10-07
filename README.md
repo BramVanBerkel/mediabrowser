@@ -92,6 +92,22 @@ make dist                    # build every platform into dist/
 The web UI lives in `web/` and is embedded into the executable at build time,
 so rebuild after changing it.
 
+### Web libraries
+
+The browser libraries the UI uses (marked and highlight.js) are pinned in
+`package.json` and copied into `web/vendor/`, which is committed, so building
+needs only Go. To update them you need [Node](https://nodejs.org):
+
+```sh
+npm install marked@latest   # or edit the version in package.json
+make vendor                 # refresh web/vendor from package.json
+```
+
+Dependabot opens a weekly pull request when new versions come out. It only
+updates `package.json` and the lockfile, so CI fails on it until you check out
+its branch, run `make vendor` and push. The highlight.js languages to bundle are
+listed in `web/syntax.js`.
+
 ### Releasing
 
 Push a version tag and GitHub Actions builds every platform and publishes a release:
